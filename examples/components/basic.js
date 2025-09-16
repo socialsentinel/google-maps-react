@@ -7,7 +7,7 @@ const Container = props => {
 
   return (
     <Map
-      centerAroundCurrentLocation
+      centerAroundCurrentLocation={false}
       className="map"
       google={props.google}
       style={{ height: '100%', position: 'relative', width: '100%' }}

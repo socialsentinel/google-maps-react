@@ -31,7 +31,7 @@ class Container extends Component {
 
     return (
       <Map
-        centerAroundCurrentLocation
+        centerAroundCurrentLocation={false}
         className="map"
         google={this.props.google}
         onClick={this.onMapClicked}
