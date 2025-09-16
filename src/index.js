@@ -53,11 +53,14 @@ export {Circle} from './components/Circle';
 export class Map extends React.Component {
   constructor(props) {
     super(props);
-
+    
     if (!props.hasOwnProperty('google')) {
       throw new Error('You must include a `google` prop');
     }
-
+    
+    // Add modern ref
+    this.mapRef = React.createRef();
+    
     this.listeners = {};
     this.state = {
       currentLocation: {
@@ -72,10 +75,13 @@ export class Map extends React.Component {
       if (navigator && navigator.geolocation) {
         this.geoPromise = makeCancelable(
           new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject);
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              enableHighAccuracy: false,
+              maximumAge: 300000 // 5 minutes
+            });
           })
         );
-
         this.geoPromise.promise
           .then(pos => {
             const coords = pos.coords;
@@ -86,7 +92,10 @@ export class Map extends React.Component {
               }
             });
           })
-          .catch(e => e);
+          .catch(error => {
+            console.warn('Geolocation failed, using initial center:', error.message);
+            // Don't change state - keep using initialCenter
+          });
       }
     }
     this.loadMap();
@@ -129,15 +138,20 @@ export class Map extends React.Component {
     if (this.props && this.props.google) {
       const {google} = this.props;
       const maps = google.maps;
-
-      const mapRef = this.refs.map;
-      const node = ReactDOM.findDOMNode(mapRef);
+      
+      // Use modern ref instead of string ref and ReactDOM.findDOMNode
+      const node = this.mapRef.current;
+      
+      if (!node) {
+        console.warn('Map container not found');
+        return;
+      }
+      
       const curr = this.state.currentLocation;
       const center = new maps.LatLng(curr.lat, curr.lng);
-
       const mapTypeIds = this.props.google.maps.MapTypeId || {};
       const mapTypeFromProps = String(this.props.mapType).toUpperCase();
-
+      
       const mapConfig = Object.assign(
         {},
         {
@@ -168,19 +182,20 @@ export class Map extends React.Component {
           gestureHandling: this.props.gestureHandling
         }
       );
-
+      
       Object.keys(mapConfig).forEach(key => {
         // Allow to configure mapConfig with 'false'
         if (mapConfig[key] === null) {
           delete mapConfig[key];
         }
       });
-
+      
       this.map = new maps.Map(node, mapConfig);
-
+      
       evtNames.forEach(e => {
         this.listeners[e] = this.map.addListener(e, this.handleEvent(e));
       });
+      
       maps.event.trigger(this.map, 'ready');
       this.forceUpdate();
     }
@@ -189,7 +204,6 @@ export class Map extends React.Component {
   handleEvent(evtName) {
     let timeout;
     const handlerName = `on${camelize(evtName)}`;
-
     return e => {
       if (timeout) {
         clearTimeout(timeout);
@@ -205,12 +219,9 @@ export class Map extends React.Component {
 
   recenterMap() {
     const map = this.map;
-
     const {google} = this.props;
-
     if (!google) return;
     const maps = google.maps;
-
     if (map) {
       let center = this.state.currentLocation;
       if (!(center instanceof google.maps.LatLng)) {
@@ -231,9 +242,7 @@ export class Map extends React.Component {
 
   renderChildren() {
     const {children} = this.props;
-
     if (!children) return;
-
     return React.Children.map(children, c => {
       if (!c) return;
       return React.cloneElement(c, {
@@ -248,16 +257,16 @@ export class Map extends React.Component {
     const style = Object.assign({}, mapStyles.map, this.props.style, {
       display: this.props.visible ? 'inherit' : 'none'
     });
-
+    
     const containerStyles = Object.assign(
       {},
       mapStyles.container,
       this.props.containerStyle
     );
-
+    
     return (
       <div style={containerStyles} className={this.props.className}>
-        <div style={style} ref="map">
+        <div style={style} ref={this.mapRef}>
           Loading map...
         </div>
         {this.renderChildren()}
