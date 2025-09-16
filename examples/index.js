@@ -1,16 +1,7 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-
-import {
-  Redirect,
-  Switch,
-  Link,
-  Route,
-  BrowserRouter as Router
-} from 'react-router-dom';
-
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter as Router } from 'react-router-dom';
 import Container from './Container';
-
 import Simple from './components/basic';
 import Marker from './components/withMarkers';
 import ClickableMarkers from './components/clickableMarkers';
@@ -69,41 +60,22 @@ const routes = [
   }
 ];
 
-const createElement = (Component, route) => {
-  // const pathname = props.location.pathname.replace('/', '');
-  // const routeDef = routes[pathname];
-
-  const newProps = {
-    key: route.name,
-    route,
-    routes,
-    // pathname,
-    routeDef: route
-    // routeDef
-  };
-
-  return <Component {...newProps} />;
-};
-
-const Routing = (
+const App = () => (
   <Router>
     <Container routes={routes} />
   </Router>
 );
 
-// <Route render={routeProps => createElement(Container, routeProps)} path="/">
-//     {Object.keys(routes).map(key => {
-//       const r = routes[key];
-//     })}
-//     </Route>
 const mountNode = document.querySelector('#root');
 
-if (mountNode) ReactDOM.render(Routing, mountNode);
-else {
+if (mountNode) {
+  // React 18 createRoot syntax
+  const root = createRoot(mountNode);
+  root.render(<App />);
+} else {
+  // Fallback for highlighting code blocks when no root element
   const hljs = require('highlight.js');
-
   const codes = document.querySelectorAll('pre code');
-
   for (let i = 0; i < codes.length; i += 1) {
     const block = codes[i];
     hljs.highlightBlock(block);
